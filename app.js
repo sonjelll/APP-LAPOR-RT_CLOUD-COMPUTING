@@ -4,6 +4,7 @@ const mysql = require('mysql2');
 const multer = require('multer');
 const multerS3 = require('multer-s3');
 const { S3Client } = require('@aws-sdk/client-s3');
+const path = require('path');
 
 const app = express();
 const port = process.env.PORT || 80;
@@ -44,9 +45,11 @@ const upload = multer({
 
 // ================= FITUR APLIKASI =================
 
-// Fitur 1: Cek Status / Home (Statik)
+// Fitur 1: Home (Menyajikan Tampilan Dashboard)
+app.use(express.static('public')); // Baris ini wajib ada di atas!
+
 app.get('/', (req, res) => {
-    res.send('<h2>Selamat Datang di Sistem LaporRT Suci!</h2><p>Sistem berjalan normal di ECS.</p>');
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Fitur 2 & 3: Submit Laporan beserta Upload Foto Bukti ke S3

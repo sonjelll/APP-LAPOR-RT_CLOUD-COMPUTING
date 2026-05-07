@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LaporRT Suci | Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #0f172a; color: #e2e8f0; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        .btn-neon { background: linear-gradient(45deg, #3b82f6, #8b5cf6); transition: 0.3s; }
+        .btn-neon:hover { box-shadow: 0 0 20px rgba(139, 92, 246, 0.5); transform: translateY(-2px); }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <header class="flex justify-between items-center mb-10">
+            <div>
+                <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
+                    <i class="fas fa-cloud"></i> LaporRT Suci
+                </h1>
+                <p class="text-slate-400 mt-1">Sistem Pelayanan Publik Digital Area Suci</p>
+            </div>
+            <div class="hidden md:block glass px-4 py-2 rounded-lg text-sm italic text-blue-300">
+                <i class="fas fa-server"></i> Running on AWS ECS Fargate
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-1">
+                <div class="glass p-6 rounded-2xl sticky top-8">
+                    <h2 class="text-xl font-semibold mb-6 flex items-center">
+                        <i class="fas fa-paper-plane mr-2 text-blue-400"></i> Buat Laporan
+                    </h2>
+                    <form id="laporForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm mb-1 text-slate-400">Nama Pelapor</label>
+                            <input type="text" id="namaPelapor" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm mb-1 text-slate-400">Deskripsi Masalah</label>
+                            <textarea id="deskripsi" required rows="3" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm mb-1 text-slate-400">Foto Bukti (Upload ke S3)</label>
+                            <input type="file" id="fotoBukti" required accept="image/*" class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer">
+                        </div>
+                        <button type="submit" id="submitBtn" class="w-full btn-neon py-3 rounded-xl font-bold text-white uppercase tracking-wider">
+                            Kirim Laporan <i class="fas fa-chevron-right ml-1"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="lg:col-span-2 space-y-6">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-semibold flex items-center">
+                        <i class="fas fa-list-ul mr-2 text-purple-400"></i> Monitor Laporan Warga
+                    </h2>
+                    <span id="counter" class="bg-blue-900 text-blue-200 text-xs font-bold px-3 py-1 rounded-full">0 Laporan</span>
+                </div>
+                
+                <div id="laporanContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-center py-10 text-slate-500">
+                    <div class="col-span-2">
+                        <i class="fas fa-spinner fa-spin text-3xl mb-4"></i>
+                        <p>Menghubungkan ke RDS...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('laporForm');
+        const container = document.getElementById('laporanContainer');
+        const counter = document.getElementById('counter');
+
+        // 1. Fungsi Mengambil Data (Read)
+        async function fetchLaporan() {
+            try {
+                const res = await fetch('/api/lapor');
+                const data = await res.json();
+                
+                counter.innerText = `${data.length} Laporan`;
+                
+                if(data.length === 0) {
+                    container.innerHTML = '<p class="col-span-2">Belum ada laporan dari warga.</p>';
+                    return;
+                }
+
+                container.innerHTML = data.map(item => `
+                    <div class="glass p-4 rounded-2xl hover:border-blue-500/50 transition-all group">
+                        <div class="relative overflow-hidden rounded-xl h-40 mb-4 bg-slate-900">
+                            <img src="${item.foto_url}" alt="Bukti" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                            <span class="absolute top-2 right-2 bg-slate-900/80 backdrop-blur px-2 py-1 rounded text-[10px] text-blue-300">
+                                S3 Storage
+                            </span>
+                        </div>
+                        <h3 class="font-bold text-blue-400 truncate">${item.nama}</h3>
+                        <p class="text-sm text-slate-400 line-clamp-2 mt-1 italic">"${item.deskripsi}"</p>
+                        <div class="mt-4 pt-3 border-t border-slate-700/50 flex justify-between items-center text-[10px] text-slate-500">
+                            <span><i class="far fa-clock"></i> Baru Saja</span>
+                            <span class="text-green-500 font-bold uppercase tracking-tighter">Verified</span>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                container.innerHTML = '<p class="col-span-2 text-red-400 text-sm italic">Gagal mengambil data dari RDS</p>';
+            }
+        }
+
+        // 2. Fungsi Kirim Laporan (Create)
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+
+            const formData = new FormData();
+            formData.append('namaPelapor', document.getElementById('namaPelapor').value);
+            formData.append('deskripsi', document.getElementById('deskripsi').value);
+            formData.append('fotoBukti', document.getElementById('fotoBukti').files[0]);
+
+            try {
+                const res = await fetch('/api/lapor', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if(res.ok) {
+                    form.reset();
+                    fetchLaporan(); // Update list otomatis
+                    alert('Laporan berhasil dikirim ke AWS!');
+                }
+            } catch (err) {
+                alert('Gagal mengirim laporan. Cek koneksi ECS ke RDS!');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Kirim Laporan <i class="fas fa-chevron-right ml-1"></i>';
+            }
+        });
+
+        // Load data saat halaman dibuka
+        fetchLaporan();
+    </script>
+</body>
+</html>
