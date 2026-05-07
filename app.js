@@ -102,7 +102,11 @@ app.post('/api/lapor', upload.single('fotoBukti'), (req, res) => {
 // Fitur 4: Melihat Data Laporan (Read dari RDS)
 app.get('/api/lapor', (req, res) => {
     db.query("SELECT * FROM laporan", (err, results) => {
-        if (err) throw err;
+        if (err) {
+            // Daripada throw err (bikin mati), kita kirim pesan error saja
+            console.error("Gagal ambil data, mungkin tabel belum siap:", err.message);
+            return res.status(500).json({ error: "Tabel belum siap atau tidak ditemukan" });
+        }
         res.json(results);
     });
 });
