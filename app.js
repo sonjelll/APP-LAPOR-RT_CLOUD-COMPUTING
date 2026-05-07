@@ -20,6 +20,25 @@ const db = mysql.createPool({
     database: process.env.DB_NAME,
 });
 
+// Skrip otomatis buat tabel kalau belum ada
+const sqlCreateTable = `
+    CREATE TABLE IF NOT EXISTS laporan (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        nama VARCHAR(255) NOT NULL,
+        deskripsi TEXT,
+        foto_url VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+`;
+
+db.query(sqlCreateTable, (err) => {
+    if (err) {
+        console.error('Waduh, gagal buat tabel otomatis nih:', err.message);
+    } else {
+        console.log('Mantap! Tabel "laporan" sudah siap di RDS.');
+    }
+});
+
 // 2. Konfigurasi AWS S3 Client
 const s3 = new S3Client({
     region: process.env.AWS_REGION,
